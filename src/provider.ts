@@ -180,18 +180,21 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 
 		const allModels: HFModelItem[] = [];
 
-		// Add models from detailed configuration
+		// Add models from detailed configuration first
 		if (userModels && userModels.length > 0) {
 			allModels.push(...userModels);
 		}
 
-		// Add models from simple comma-separated list
+		// Add models from simple comma-separated list, but skip if already exists in detail config
 		if (userModelNames.trim()) {
 			const modelNamesArray = userModelNames.split(',')
 				.map(name => name.trim())
 				.filter(name => name.length > 0);
 
-			const simpleModels = modelNamesArray.map(name => createModelFromName(name));
+			const existingModelIds = new Set(allModels.map(m => m.id));
+			const simpleModels = modelNamesArray
+				.filter(name => !existingModelIds.has(name)) // Skip if already in detail config
+				.map(name => createModelFromName(name));
 			allModels.push(...simpleModels);
 		}
 
