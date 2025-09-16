@@ -9,16 +9,28 @@ import {
 	Progress,
 } from "vscode";
 
-import type { HFModelItem, HFModelsResponse } from "./types";
+import type { HFModelItem } from "./types";
 
-import { convertTools, convertMessages, tryParseJSONObject, validateRequest } from "./utils";
+import { convertTools, convertMessages, tryParseJSONObject, validateRequest, constructAzureUrl } from "./utils";
 
 const DEFAULT_CONTEXT_LENGTH = 128000;
 
 /**
- * VS Code Chat provider backed by Hugging Face Inference Providers.
+ * Create a model info object with default values for simple model names
  */
-export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
+function createModelFromName(modelName: string): HFModelItem {
+	return {
+		id: modelName.trim(),
+		owned_by: "Unknown",
+		context_length: DEFAULT_CONTEXT_LENGTH,
+		vision: false
+	};
+}
+
+/**
+ * VS Code Chat provider backed by Azure OpenAI Services.
+ */
+export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 	private _chatEndpoints: { model: string; modelMaxPromptTokens: number }[] = [];
 	/** Buffer for assembling streamed tool calls by index. */
 	private _toolCallBuffers: Map<number, { id?: string; name?: string; args: string }> = new Map<
@@ -90,26 +102,54 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 	): Promise<LanguageModelChatInformation[]> {
 		const apiKey = await this.ensureApiKey(options.silent);
 		if (!apiKey) {
+			if (!options.silent) {
+				vscode.window.showWarningMessage(
+					'Azure OpenAI API key not configured. Please set your API key to use Azure OpenAI models.',
+					'Set API Key'
+				).then(selection => {
+					if (selection === 'Set API Key') {
+						vscode.commands.executeCommand('azureoai.setApikey');
+					}
+				});
+			}
 			return [];
 		}
 
 		// Check for user-configured models first
 		const config = vscode.workspace.getConfiguration();
-		const userModels = config.get<HFModelItem[]>('oaicopilot.models', []);
-		const userMaxTokens = config.get<number>('oaicopilot.maxTokens', 4096);
+		const userModels = config.get<HFModelItem[]>('azureoai.models', []);
+		const userModelNames = config.get<string>('azureoai.modelNames', '');
+		const userMaxTokens = config.get<number>('azureoai.maxTokens', 4096);
 
-		let infos: LanguageModelChatInformation[];
+		const allModels: HFModelItem[] = [];
+
+		// Add models from detailed configuration
 		if (userModels && userModels.length > 0) {
+			allModels.push(...userModels);
+		}
+
+		// Add models from simple comma-separated list
+		if (userModelNames.trim()) {
+			const modelNamesArray = userModelNames.split(',')
+				.map(name => name.trim())
+				.filter(name => name.length > 0);
+
+			const simpleModels = modelNamesArray.map(name => createModelFromName(name));
+			allModels.push(...simpleModels);
+		}
+
+		let infos: LanguageModelChatInformation[] = [];
+		if (allModels.length > 0) {
 			// Return user-provided models directly
-			 infos = userModels.map((m) => {
+			 infos = allModels.map((m) => {
 				const contextLen =  m?.context_length ?? DEFAULT_CONTEXT_LENGTH;
 				const maxOutput = userMaxTokens;
 				const maxInput = Math.max(1, contextLen - maxOutput);
 				return {
 					id: `${m.id}`,
 					name: `${m.id} via ${m.owned_by}`,
-					tooltip: `OAI Compatible via ${m.owned_by}`,
-					family: "oai-compatible",
+					tooltip: `Azure OpenAI via ${m.owned_by}`,
+					family: "azure-openai",
 					version: "1.0.0",
 					maxInputTokens: maxInput,
 					maxOutputTokens: maxOutput,
@@ -120,59 +160,17 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 				} satisfies LanguageModelChatInformation;
 			});
 		} else {
-			// Fallback: Fetch models from Hugging Face API
-			const { models } = await this.fetchModels(apiKey);
-
-		 	infos = models.flatMap((m) => {
-				const providers = m?.providers ?? [];
-				const modalities = m.architecture?.input_modalities ?? [];
-				const vision = Array.isArray(modalities) && modalities.includes("image");
-
-				// Build entries for all providers that support tool calling
-				const toolProviders = providers.filter((p) => p.supports_tools === true);
-				const entries: LanguageModelChatInformation[] = [];
-
-				for (const p of toolProviders) {
-					const contextLen = p?.context_length ?? DEFAULT_CONTEXT_LENGTH;
-					const maxOutput = userMaxTokens;
-					const maxInput = Math.max(1, contextLen - maxOutput);
-					entries.push({
-						id: `${m.id}:${p.provider}`,
-						name: `${m.id} via ${p.provider}`,
-						tooltip: `OAI Compatible via ${p.provider}`,
-						family: "oai-compatible",
-						version: "1.0.0",
-						maxInputTokens: maxInput,
-						maxOutputTokens: maxOutput,
-						capabilities: {
-							toolCalling: true,
-							imageInput: vision,
-						},
-					} satisfies LanguageModelChatInformation);
-				}
-
-				if (entries.length === 0) {
-					const base = providers.length > 0 ? providers[0] : null;
-					const contextLen = base?.context_length ?? DEFAULT_CONTEXT_LENGTH;
-					const maxOutput = userMaxTokens;
-					const maxInput = Math.max(1, contextLen - maxOutput);
-					entries.push({
-						id: `${m.id}`,
-						name: `${m.id} via OAI Compatible`,
-						tooltip: "OAI Compatible",
-						family: "oai-compatible",
-						version: "1.0.0",
-						maxInputTokens: maxInput,
-						maxOutputTokens: maxOutput,
-						capabilities: {
-							toolCalling: true,
-							imageInput: true,
-						},
-					} satisfies LanguageModelChatInformation);
-				}
-
-				return entries;
-			});
+			// No models configured - show helpful message to user
+			if (!options.silent) {
+				vscode.window.showWarningMessage(
+					'Azure OpenAI models not configured. Please add your deployed models in VS Code Settings under "Azure OpenAI Copilot > Models" or "Azure OpenAI Copilot > Model Names".',
+					'Open Settings'
+				).then(selection => {
+					if (selection === 'Open Settings') {
+						vscode.commands.executeCommand('workbench.action.openSettings', 'azureoai.models');
+					}
+				});
+			}
 		}
 
 		this._chatEndpoints = infos.map((info) => ({
@@ -189,46 +187,6 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 	): Promise<LanguageModelChatInformation[]> {
 		return this.prepareLanguageModelChatInformation({ silent: options.silent ?? false }, _token);
 	}
-
-	/**
-	 * Fetch the list of models and supplementary metadata from Hugging Face.
-	 * @param apiKey The HF API key used to authenticate.
-	 */
-	private async fetchModels(
-		apiKey: string
-	): Promise<{ models: HFModelItem[] }> {
-			const config = vscode.workspace.getConfiguration();
-			const BASE_URL = config.get<string>('oaicopilot.baseUrl', "");
-			const modelsList = (async () => {
-				const resp = await fetch(`${BASE_URL}/models`, {
-					method: "GET",
-					headers: { Authorization: `Bearer ${apiKey}`, "User-Agent": this.userAgent },
-				});
-				if (!resp.ok) {
-					let text = "";
-					try {
-						text = await resp.text();
-					} catch (error) {
-						console.error("[OAI Compatible Model Provider] Failed to read response text", error);
-					}
-					const err = new Error(
-						`Failed to fetch OAI Compatible models: ${resp.status} ${resp.statusText}${text ? `\n${text}` : ""}`
-					);
-					console.error("[OAI Compatible Model Provider] Failed to fetch OAI Compatible models", err);
-					throw err;
-				}
-				const parsed = (await resp.json()) as HFModelsResponse;
-				return parsed.data ?? [];
-			})();
-
-			try {
-				const models = await modelsList;
-				return { models };
-			} catch (err) {
-				console.error("[OAI Compatible Model Provider] Failed to fetch OAI Compatible models", err);
-				throw err;
-			}
-		}
 
 	/**
 	 * Returns the response for a chat request, passing the results to the progress callback.
@@ -264,7 +222,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 				try {
 					progress.report(part);
 				} catch (e) {
-					console.error("[OAI Compatible Model Provider] Progress.report failed", {
+					console.error("[Azure OpenAI Provider] Progress.report failed", {
 						modelId: model.id,
 						error: e instanceof Error ? { name: e.name, message: e.message } : String(e),
 					});
@@ -274,7 +232,15 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 		try {
 			const apiKey = await this.ensureApiKey(true);
 			if (!apiKey) {
-				throw new Error("OAI Compatible API key not found");
+				throw new Error("Azure OpenAI API key not found. Please configure your API key in the extension settings.");
+			}
+
+			// Check if models are configured
+			const configCheck = vscode.workspace.getConfiguration();
+			const userModelsCheck = configCheck.get<HFModelItem[]>('azureoai.models', []);
+			const userModelNamesCheck = configCheck.get<string>('azureoai.modelNames', '');
+			if ((!userModelsCheck || userModelsCheck.length === 0) && !userModelNamesCheck.trim()) {
+				throw new Error("No Azure OpenAI models configured. Please add your deployed models in VS Code Settings under 'Azure OpenAI Copilot > Models' or 'Azure OpenAI Copilot > Model Names'.");
 			}
 
             const openaiMessages = convertMessages(messages);
@@ -291,15 +257,15 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
             const toolTokenCount = this.estimateToolTokens(toolConfig.tools);
             const tokenLimit = Math.max(1, model.maxInputTokens);
             if (inputTokenCount + toolTokenCount > tokenLimit) {
-                console.error("[OAI Compatible Model Provider] Message exceeds token limit", { total: inputTokenCount + toolTokenCount, tokenLimit });
+                console.error("[Azure OpenAI Provider] Message exceeds token limit", { total: inputTokenCount + toolTokenCount, tokenLimit });
                 throw new Error("Message exceeds token limit.");
             }
 
             const config = vscode.workspace.getConfiguration();
-            const userTemperature = config.get<number>('oaicopilot.temperature', 0);
-            const topP = config.get<number>('oaicopilot.topP', 1);
-            const enableThinking = config.get<boolean>('oaicopilot.enableThinking', true);
-			const userMaxTokens = config.get<number>('oaicopilot.maxTokens', 4096);
+            const userTemperature = config.get<number>('azureoai.temperature', 0);
+            const topP = config.get<number>('azureoai.topP', 1);
+            const enableThinking = config.get<boolean>('azureoai.enableThinking', true);
+			const userMaxTokens = config.get<number>('azureoai.maxTokens', 4096);
 
             const temperature = options.modelOptions?.temperature ?? userTemperature;
             // 确保 temperature 在 0-2 范围内
@@ -341,8 +307,13 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 			}
 			// console.log(JSON.stringify(requestBody))
 
-			const BASE_URL = config.get<string>('oaicopilot.baseUrl', "");
-			const response = await fetch(`${BASE_URL}/chat/completions`, {
+			const baseUrl = config.get<string>('azureoai.baseUrl', "");
+			const azureResourceName = config.get<string>('azureoai.azureResourceName', '');
+			const azureApiVersion = config.get<string>('azureoai.azureApiVersion', '');
+
+			const requestUrl = constructAzureUrl(baseUrl, azureResourceName, azureApiVersion, model.id);
+
+			const response = await fetch(requestUrl, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${apiKey}`,
@@ -354,18 +325,18 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 
 			if (!response.ok) {
 				const errorText = await response.text();
-				console.error("[OAI Compatible Model Provider] HF API error response", errorText);
+				console.error("[Azure OpenAI Provider] API error response", errorText);
 				throw new Error(
-					`OAI Compatible API error: ${response.status} ${response.statusText}${errorText ? `\n${errorText}` : ""}`
+					`Azure OpenAI API error: ${response.status} ${response.statusText}${errorText ? `\n${errorText}` : ""}`
 				);
 			}
 
 			if (!response.body) {
-				throw new Error("No response body from OAI Compatible API");
+				throw new Error("No response body from Azure OpenAI API");
 			}
 			await this.processStreamingResponse(response.body, trackingProgress, token);
 		} catch (err) {
-			console.error("[OAI Compatible Model Provider] Chat request failed", {
+			console.error("[Azure OpenAI Provider] Chat request failed", {
 				modelId: model.id,
 				messageCount: messages.length,
 				error: err instanceof Error ? { name: err.name, message: err.message } : String(err),
@@ -404,17 +375,17 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
 	 * @param silent If true, do not prompt the user.
 	 */
 	private async ensureApiKey(silent: boolean): Promise<string | undefined> {
-		let apiKey = await this.secrets.get("oaicopilot.apiKey");
+		let apiKey = await this.secrets.get("azureoai.apiKey");
 		if (!apiKey && !silent) {
 			const entered = await vscode.window.showInputBox({
-				title: "OAI Compatible API Key",
-				prompt: "Enter your OAI Compatible API key",
+				title: "Azure OpenAI API Key",
+				prompt: "Enter your Azure OpenAI API key",
 				ignoreFocusOut: true,
 				password: true,
 			});
 			if (entered && entered.trim()) {
 				apiKey = entered.trim();
-				await this.secrets.store("oaicopilot.apiKey", apiKey);
+				await this.secrets.store("azureoai.apiKey", apiKey);
 			}
 		}
 		return apiKey;
@@ -797,7 +768,7 @@ export class HuggingFaceChatModelProvider implements LanguageModelChatProvider {
             const parsed = tryParseJSONObject(buf.args);
             if (!parsed.ok) {
                 if (throwOnInvalid) {
-                    console.error("[OAI Compatible Model Provider] Invalid JSON for tool call", { idx, snippet: (buf.args || "").slice(0, 200) });
+                    console.error("[Azure OpenAI Provider] Invalid JSON for tool call", { idx, snippet: (buf.args || "").slice(0, 200) });
                     throw new Error("Invalid JSON for tool call");
                 }
                 // When not throwing (e.g. on [DONE]), drop silently to reduce noise
