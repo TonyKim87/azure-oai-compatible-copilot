@@ -81,7 +81,7 @@ Use detailed model configuration for advanced settings:
 }
 ```
 
-> **Note**: You can use both configuration methods simultaneously. When model names are identical in both configurations, **Detailed Configuration takes priority** over Simple Configuration. For example, if you have "gpt-4" in both settings, the detailed parameters will be used.
+> **Note**: You can use both configuration methods simultaneously. The extension will combine models from both settings.
 
 ---
 
