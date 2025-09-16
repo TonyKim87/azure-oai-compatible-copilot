@@ -85,7 +85,7 @@ function createModelFromName(modelName: string): HFModelItem {
 }
 
 /**
- * VS Code Chat provider backed by Azure OpenAI Services.
+ * VS Code Chat provider backed by Azure OAI Compatible Services.
  */
 export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 	private _chatEndpoints: { model: string; modelMaxPromptTokens: number }[] = [];
@@ -161,7 +161,7 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 		if (!apiKey) {
 			if (!options.silent) {
 				vscode.window.showWarningMessage(
-					'Azure OpenAI API key not configured. Please set your API key to use Azure OpenAI models.',
+					'Azure OAI Compatible API key not configured. Please set your API key to use Azure OAI Compatible models.',
 					'Set API Key'
 				).then(selection => {
 					if (selection === 'Set API Key') {
@@ -205,8 +205,8 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 				return {
 					id: `${m.id}`,
 					name: `${m.id} via ${m.owned_by}`,
-					tooltip: `Azure OpenAI via ${m.owned_by}`,
-					family: "azure-openai",
+					tooltip: `Azure OAI Compatible via ${m.owned_by}`,
+					family: "azure-oai-compatible",
 					version: "1.0.0",
 					maxInputTokens: maxInput,
 					maxOutputTokens: maxOutput,
@@ -220,7 +220,7 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 			// No models configured - show helpful message to user
 			if (!options.silent) {
 				vscode.window.showWarningMessage(
-					'Azure OpenAI models not configured. Please add your deployed models in VS Code Settings under "Azure OpenAI Copilot > Models With Detail Params" or "Azure OpenAI Copilot > Models With Default Params".',
+					'Azure OAI Compatible models not configured. Please add your deployed models in VS Code Settings under "Azure OAI Compatible Copilot > Models With Detail Params" or "Azure OAI Compatible Copilot > Models With Default Params".',
 					'Open Settings'
 				).then(selection => {
 					if (selection === 'Open Settings') {
@@ -279,7 +279,7 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 				try {
 					progress.report(part);
 				} catch (e) {
-					console.error("[Azure OpenAI Provider] Progress.report failed", {
+					console.error("[Azure OAI Compatible Provider] Progress.report failed", {
 						modelId: model.id,
 						error: e instanceof Error ? { name: e.name, message: e.message } : String(e),
 					});
@@ -289,7 +289,7 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 		try {
 			const apiKey = await this.ensureApiKey(true);
 			if (!apiKey) {
-				throw new Error("Azure OpenAI API key not found. Please configure your API key in the extension settings.");
+				throw new Error("Azure OAI Compatible API key not found. Please configure your API key in the extension settings.");
 			}
 
 			// Check if models are configured
@@ -297,7 +297,7 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 			const userModelsCheck = configCheck.get<HFModelItem[]>('azureoai.modelsWithDetailParams', []);
 			const userModelNamesCheck = configCheck.get<string>('azureoai.modelsWithDefaultParams', '');
 			if ((!userModelsCheck || userModelsCheck.length === 0) && !userModelNamesCheck.trim()) {
-				throw new Error("No Azure OpenAI models configured. Please add your deployed models in VS Code Settings under 'Azure OpenAI Copilot > Models With Detail Params' or 'Azure OpenAI Copilot > Models With Default Params'.");
+				throw new Error("No Azure OAI Compatible models configured. Please add your deployed models in VS Code Settings under 'Azure OAI Compatible Copilot > Models With Detail Params' or 'Azure OAI Compatible Copilot > Models With Default Params'.");
 			}
 
             const openaiMessages = convertMessages(messages);
@@ -314,7 +314,7 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
             const toolTokenCount = this.estimateToolTokens(toolConfig.tools);
             const tokenLimit = Math.max(1, model.maxInputTokens);
             if (inputTokenCount + toolTokenCount > tokenLimit) {
-                console.error("[Azure OpenAI Provider] Message exceeds token limit", { total: inputTokenCount + toolTokenCount, tokenLimit });
+                console.error("[Azure OAI Compatible Provider] Message exceeds token limit", { total: inputTokenCount + toolTokenCount, tokenLimit });
                 throw new Error("Message exceeds token limit.");
             }
 
@@ -382,18 +382,18 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 
 			if (!response.ok) {
 				const errorText = await response.text();
-				console.error("[Azure OpenAI Provider] API error response", errorText);
+				console.error("[Azure OAI Compatible Provider] API error response", errorText);
 				throw new Error(
-					`Azure OpenAI API error: ${response.status} ${response.statusText}${errorText ? `\n${errorText}` : ""}`
+					`Azure OAI Compatible API error: ${response.status} ${response.statusText}${errorText ? `\n${errorText}` : ""}`
 				);
 			}
 
 			if (!response.body) {
-				throw new Error("No response body from Azure OpenAI API");
+				throw new Error("No response body from Azure OAI Compatible API");
 			}
 			await this.processStreamingResponse(response.body, trackingProgress, token);
 		} catch (err) {
-			console.error("[Azure OpenAI Provider] Chat request failed", {
+			console.error("[Azure OAI Compatible Provider] Chat request failed", {
 				modelId: model.id,
 				messageCount: messages.length,
 				error: err instanceof Error ? { name: err.name, message: err.message } : String(err),
@@ -435,8 +435,8 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 		let apiKey = await this.secrets.get("azureoai.apiKey");
 		if (!apiKey && !silent) {
 			const entered = await vscode.window.showInputBox({
-				title: "Azure OpenAI API Key",
-				prompt: "Enter your Azure OpenAI API key",
+				title: "Azure OAI Compatible API Key",
+				prompt: "Enter your Azure OAI Compatible API key",
 				ignoreFocusOut: true,
 				password: true,
 			});
@@ -825,7 +825,7 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
             const parsed = tryParseJSONObject(buf.args);
             if (!parsed.ok) {
                 if (throwOnInvalid) {
-                    console.error("[Azure OpenAI Provider] Invalid JSON for tool call", { idx, snippet: (buf.args || "").slice(0, 200) });
+                    console.error("[Azure OAI Compatible Provider] Invalid JSON for tool call", { idx, snippet: (buf.args || "").slice(0, 200) });
                     throw new Error("Invalid JSON for tool call");
                 }
                 // When not throwing (e.g. on [DONE]), drop silently to reduce noise

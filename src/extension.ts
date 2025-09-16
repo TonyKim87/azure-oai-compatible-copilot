@@ -10,7 +10,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const ua = `azure-oai-compatible-copilot/${extVersion} VSCode/${vscodeVersion}`;
 
 	const provider = new AzureOpenAIChatModelProvider(context.secrets, ua);
-	// Register the Azure OpenAI provider under the vendor id used in package.json
+	// Register the Azure OAI Compatible provider under the vendor id used in package.json
 	vscode.lm.registerLanguageModelChatProvider("azureoai", provider);
 
 	// Management command to configure API key
@@ -18,8 +18,8 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand("azureoai.setApikey", async () => {
 			const existing = await context.secrets.get("azureoai.apiKey");
 			const apiKey = await vscode.window.showInputBox({
-				title: "Azure OpenAI API Key",
-				prompt: existing ? "Update your Azure OpenAI API key" : "Enter your Azure OpenAI API key",
+				title: "Azure OAI Compatible API Key",
+				prompt: existing ? "Update your Azure OAI Compatible API key" : "Enter your Azure OAI Compatible API key",
 				ignoreFocusOut: true,
 				password: true,
 				value: existing ?? "",
@@ -29,11 +29,11 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			if (!apiKey.trim()) {
 				await context.secrets.delete("azureoai.apiKey");
-				vscode.window.showInformationMessage("Azure OpenAI API key cleared.");
+				vscode.window.showInformationMessage("Azure OAI Compatible API key cleared.");
 				return;
 			}
 			await context.secrets.store("azureoai.apiKey", apiKey.trim());
-			vscode.window.showInformationMessage("Azure OpenAI API key saved.");
+			vscode.window.showInformationMessage("Azure OAI Compatible API key saved.");
 		})
 	);
 }

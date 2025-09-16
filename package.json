@@ -1,8 +1,8 @@
 {
 	"name": "azure-oai-compatible-copilot",
 	"publisher": "tony-kim",
-	"displayName": "Azure OpenAI Provider for Copilot",
-	"description": "An extension that integrates Azure OpenAI services into GitHub Copilot Chat with enterprise-grade security and compliance",
+	"displayName": "Azure OAI Compatible Provider for Copilot",
+	"description": "An extension that integrates Azure OAI Compatible services into GitHub Copilot Chat with enterprise-grade security and compliance",
 	"icon": "assets/logo.png",
 	"repository": {
 		"type": "git",
@@ -31,18 +31,18 @@
 		"languageModelChatProviders": [
 			{
 				"vendor": "azureoai",
-				"displayName": "Azure OpenAI",
+				"displayName": "Azure OAI Compatible",
 				"managementCommand": "azureoai.setApikey"
 			}
 		],
 		"commands": [
 			{
 				"command": "azureoai.setApikey",
-				"title": "Set Azure OpenAI API Key"
+				"title": "Set Azure OAI Compatible API Key"
 			}
 		],
 		"configuration": {
-			"title": "Azure OpenAI Copilot",
+			"title": "Azure OAI Compatible Copilot",
 			"properties": {
 				"azureoai.temperature": {
 					"type": "number",
@@ -73,17 +73,17 @@
 				"azureoai.baseUrl": {
 					"type": "string",
 					"default": "https://<RESOURCE>.openai.azure.com/openai/deployments/<MODEL>",
-					"description": "The base URL for Azure OpenAI API. Use placeholders: <RESOURCE> for your resource name, <MODEL> for deployment name. Example: https://myresource.openai.azure.com/openai/deployments/gpt-4"
+					"description": "The base URL for Azure OAI Compatible API. Use placeholders: <RESOURCE> for your resource name, <MODEL> for deployment name. Example: https://myresource.openai.azure.com/openai/deployments/gpt-4"
 				},
 				"azureoai.azureResourceName": {
 					"type": "string",
 					"default": "",
-					"description": "Azure OpenAI resource name. Replaces <RESOURCE> in baseUrl."
+					"description": "Azure OAI Compatible resource name. Replaces <RESOURCE> in baseUrl."
 				},
 				"azureoai.azureApiVersion": {
 					"type": "string",
 					"default": "2024-02-15-preview",
-					"description": "Azure OpenAI API version. Added as query parameter api-version."
+					"description": "Azure OAI Compatible API version. Added as query parameter api-version."
 				},
 				"azureoai.modelsWithDetailParams": {
 					"type": "array",
