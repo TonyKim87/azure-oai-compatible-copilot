@@ -415,33 +415,49 @@ export function tryParseJSONObject(text: string): { ok: true; value: Record<stri
  * @returns 완성된 Azure OpenAI 엔드포인트 URL
  */
 export function constructAzureUrl(baseUrl: string, resourceName: string, apiVersion: string, model: string): string {
+  console.log('[Azure OpenAI] constructAzureUrl input:', {
+    baseUrl,
+    resourceName,
+    apiVersion,
+    model
+  });
+
   let processedUrl = baseUrl;
 
   // <RESOURCE> 플레이스홀더를 실제 리소스 이름으로 치환합니다.
   if (resourceName && processedUrl.includes('<RESOURCE>')) {
+    const beforeReplace = processedUrl;
     processedUrl = processedUrl.replace(/<RESOURCE>/g, resourceName);
+    console.log('[Azure OpenAI] Replaced <RESOURCE>:', { before: beforeReplace, after: processedUrl });
   }
 
   // <MODEL> 플레이스홀더를 실제 모델 배포 이름으로 치환합니다.
   if (model && processedUrl.includes('<MODEL>')) {
+    const beforeReplace = processedUrl;
     processedUrl = processedUrl.replace(/<MODEL>/g, model);
+    console.log('[Azure OpenAI] Replaced <MODEL>:', { before: beforeReplace, after: processedUrl });
   }
 
   // <API_VER> 플레이스홀더를 실제 API 버전으로 치환합니다.
   if (apiVersion && processedUrl.includes('<API_VER>')) {
+    const beforeReplace = processedUrl;
     processedUrl = processedUrl.replace(/<API_VER>/g, apiVersion);
+    console.log('[Azure OpenAI] Replaced <API_VER>:', { before: beforeReplace, after: processedUrl });
   }
 
   // 최종적으로 Azure Chat Completions API 형식에 맞게 경로와 api-version을 추가합니다.
   // 이미 /chat/completions가 포함되어 있으면 추가하지 않습니다.
   if (!processedUrl.includes('/chat/completions')) {
+    console.log('[Azure OpenAI] Adding /chat/completions to URL');
     processedUrl = `${processedUrl}/chat/completions`;
   }
   
   // apiVersion이 설정된 경우에만 쿼리 파라미터로 추가합니다.
+  let finalUrl = processedUrl;
   if (apiVersion) {
-    return `${processedUrl}?api-version=${apiVersion}`;
+    finalUrl = `${processedUrl}?api-version=${apiVersion}`;
   }
 
-  return processedUrl;
+  console.log('[Azure OpenAI] Final constructed URL:', finalUrl);
+  return finalUrl;
 }

@@ -121,10 +121,18 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 		const userModelNames = config.get<string>('azureoai.modelsWithDefaultParams', '');
 		const userMaxTokens = config.get<number>('azureoai.maxTokens', 4096);
 
+		// Debug: Log configuration loading
+		console.log('[Azure OpenAI] Loading configuration:', {
+			detailParamsCount: userModels.length,
+			defaultParamsString: userModelNames,
+			maxTokens: userMaxTokens
+		});
+
 		const allModels: HFModelItem[] = [];
 
 		// Add models from detailed configuration
 		if (userModels && userModels.length > 0) {
+			console.log('[Azure OpenAI] Adding models from detailed params:', userModels.map(m => m.id));
 			allModels.push(...userModels);
 		}
 
@@ -134,17 +142,27 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 				.map(name => name.trim())
 				.filter(name => name.length > 0);
 
+			console.log('[Azure OpenAI] Adding models from default params:', modelNamesArray);
 			const simpleModels = modelNamesArray.map(name => createModelFromName(name));
 			allModels.push(...simpleModels);
 		}
 
 		let infos: LanguageModelChatInformation[] = [];
 		if (allModels.length > 0) {
+			console.log('[Azure OpenAI] Processing models for language model info:', allModels.length);
 			// Return user-provided models directly
 			 infos = allModels.map((m) => {
 				const contextLen =  m?.context_length ?? DEFAULT_CONTEXT_LENGTH;
 				const maxOutput = userMaxTokens;
 				const maxInput = Math.max(1, contextLen - maxOutput);
+				
+				console.log(`[Azure OpenAI] Creating model info for ${m.id}:`, {
+					contextLength: contextLen,
+					maxInput,
+					maxOutput,
+					vision: m?.vision
+				});
+				
 				return {
 					id: `${m.id}`,
 					name: `${m.id} via ${m.owned_by}`,
@@ -311,7 +329,17 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 			const azureResourceName = config.get<string>('azureoai.azureResourceName', '');
 			const azureApiVersion = config.get<string>('azureoai.azureApiVersion', '');
 
+			console.log('[Azure OpenAI] API Configuration:', {
+				baseUrl,
+				resourceName: azureResourceName,
+				apiVersion: azureApiVersion,
+				modelId: model.id
+			});
+
 			const requestUrl = constructAzureUrl(baseUrl, azureResourceName, azureApiVersion, model.id);
+
+			console.log('[Azure OpenAI] Constructed request URL:', requestUrl);
+			console.log('[Azure OpenAI] Request body:', JSON.stringify(requestBody, null, 2));
 
 			const response = await fetch(requestUrl, {
                 method: "POST",
