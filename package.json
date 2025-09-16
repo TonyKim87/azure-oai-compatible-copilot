@@ -85,7 +85,7 @@
 					"default": "2024-02-15-preview",
 					"description": "Azure OpenAI API version. Added as query parameter api-version."
 				},
-				"azureoai.models": {
+				"azureoai.modelsWithDetailParams": {
 					"type": "array",
 					"default": [],
 					"items": {
@@ -98,7 +98,12 @@
 						},
 						"required": ["id", "owned_by"]
 					},
-					"description": "A list of preferred models to use. If provided, these models will be used directly instead of fetching from the API. Model Value is id, owned_by, context_length and vision."
+					"description": "Advanced model configuration with detailed parameters. Use this for custom context_length, vision capabilities, and other advanced settings."
+				},
+				"azureoai.modelsWithDefaultParams": {
+					"type": "string",
+					"default": "",
+					"description": "Simple comma-separated list of model names (e.g., 'gpt-4,gpt-35-turbo'). Default values will be automatically applied for model parameters like context_length and vision capabilities."
 				}
 			}
 		}

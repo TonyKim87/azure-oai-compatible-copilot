@@ -117,8 +117,8 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 
 		// Check for user-configured models first
 		const config = vscode.workspace.getConfiguration();
-		const userModels = config.get<HFModelItem[]>('azureoai.models', []);
-		const userModelNames = config.get<string>('azureoai.modelNames', '');
+		const userModels = config.get<HFModelItem[]>('azureoai.modelsWithDetailParams', []);
+		const userModelNames = config.get<string>('azureoai.modelsWithDefaultParams', '');
 		const userMaxTokens = config.get<number>('azureoai.maxTokens', 4096);
 
 		const allModels: HFModelItem[] = [];
@@ -163,11 +163,11 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 			// No models configured - show helpful message to user
 			if (!options.silent) {
 				vscode.window.showWarningMessage(
-					'Azure OpenAI models not configured. Please add your deployed models in VS Code Settings under "Azure OpenAI Copilot > Models" or "Azure OpenAI Copilot > Model Names".',
+					'Azure OpenAI models not configured. Please add your deployed models in VS Code Settings under "Azure OpenAI Copilot > Models With Detail Params" or "Azure OpenAI Copilot > Models With Default Params".',
 					'Open Settings'
 				).then(selection => {
 					if (selection === 'Open Settings') {
-						vscode.commands.executeCommand('workbench.action.openSettings', 'azureoai.models');
+						vscode.commands.executeCommand('workbench.action.openSettings', 'azureoai.modelsWithDetailParams');
 					}
 				});
 			}
@@ -237,10 +237,10 @@ export class AzureOpenAIChatModelProvider implements LanguageModelChatProvider {
 
 			// Check if models are configured
 			const configCheck = vscode.workspace.getConfiguration();
-			const userModelsCheck = configCheck.get<HFModelItem[]>('azureoai.models', []);
-			const userModelNamesCheck = configCheck.get<string>('azureoai.modelNames', '');
+			const userModelsCheck = configCheck.get<HFModelItem[]>('azureoai.modelsWithDetailParams', []);
+			const userModelNamesCheck = configCheck.get<string>('azureoai.modelsWithDefaultParams', '');
 			if ((!userModelsCheck || userModelsCheck.length === 0) && !userModelNamesCheck.trim()) {
-				throw new Error("No Azure OpenAI models configured. Please add your deployed models in VS Code Settings under 'Azure OpenAI Copilot > Models' or 'Azure OpenAI Copilot > Model Names'.");
+				throw new Error("No Azure OpenAI models configured. Please add your deployed models in VS Code Settings under 'Azure OpenAI Copilot > Models With Detail Params' or 'Azure OpenAI Copilot > Models With Default Params'.");
 			}
 
             const openaiMessages = convertMessages(messages);

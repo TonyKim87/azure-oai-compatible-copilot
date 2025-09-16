@@ -42,11 +42,11 @@ Configure the following in VS Code Settings (File → Preferences → Settings):
 
 #### Option 1: Simple Model Names (Recommended)
 Use comma-separated model names for quick setup:
-- **Model Names**: `azureoai.modelNames`
+- **Models With Default Params**: `azureoai.modelsWithDefaultParams`
 
 #### Option 2: Detailed Model Configuration
 Use detailed model configuration for advanced settings:
-- **Models**: `azureoai.models`
+- **Models With Detail Params**: `azureoai.modelsWithDetailParams`
 
 ### Example Configuration
 
@@ -55,7 +55,7 @@ Use detailed model configuration for advanced settings:
 {
   "azureoai.azureResourceName": "myresource",
   "azureoai.azureApiVersion": "2024-02-15-preview",
-  "azureoai.modelNames": "gpt-4,gpt-35-turbo,gpt-4-vision"
+  "azureoai.modelsWithDefaultParams": "gpt-4,gpt-35-turbo,gpt-4-vision"
 }
 ```
 
@@ -64,7 +64,7 @@ Use detailed model configuration for advanced settings:
 {
   "azureoai.azureResourceName": "myresource",
   "azureoai.azureApiVersion": "2024-02-15-preview",
-  "azureoai.models": [
+  "azureoai.modelsWithDetailParams": [
     {
       "id": "gpt-4",
       "owned_by": "Azure OpenAI",
