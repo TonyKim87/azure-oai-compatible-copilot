@@ -16,13 +16,46 @@ import { convertTools, convertMessages, tryParseJSONObject, validateRequest, con
 const DEFAULT_CONTEXT_LENGTH = 128000;
 
 /**
+ * Get context length for GPT models based on model name
+ */
+function getGPTContextLength(modelName: string): number {
+	const normalizedName = modelName.toLowerCase();
+
+	// GPT-4 variants
+	if (normalizedName.includes('gpt-4o-mini')) { return 128000; }
+	if (normalizedName.includes('gpt-4o')) { return 128000; }
+	if (normalizedName.includes('gpt-4-turbo')) { return 128000; }
+	if (normalizedName.includes('gpt-4-1106-preview')) { return 128000; }
+	if (normalizedName.includes('gpt-4-0125-preview')) { return 128000; }
+	if (normalizedName.includes('gpt-4-vision-preview')) { return 128000; }
+	if (normalizedName.includes('gpt-4-32k')) { return 32768; }
+	if (normalizedName.includes('gpt-4')) { return 8192; }
+
+	// GPT-3.5 variants
+	if (normalizedName.includes('gpt-3.5-turbo-16k')) { return 16384; }
+	if (normalizedName.includes('gpt-3.5-turbo')) { return 4096; }
+
+	// GPT-3 variants
+	if (normalizedName.includes('text-davinci-003')) { return 4097; }
+	if (normalizedName.includes('text-davinci-002')) { return 4097; }
+	if (normalizedName.includes('davinci')) { return 2049; }
+	if (normalizedName.includes('curie')) { return 2049; }
+	if (normalizedName.includes('babbage')) { return 2049; }
+	if (normalizedName.includes('ada')) { return 2049; }
+
+	// Default context length for unknown models
+	return DEFAULT_CONTEXT_LENGTH;
+}
+
+/**
  * Create a model info object with default values for simple model names
  */
 function createModelFromName(modelName: string): HFModelItem {
+	const contextLength = getGPTContextLength(modelName);
 	return {
 		id: modelName.trim(),
-		owned_by: "Unknown",
-		context_length: DEFAULT_CONTEXT_LENGTH,
+		owned_by: "SimpleConfig",
+		context_length: contextLength,
 		vision: false
 	};
 }
