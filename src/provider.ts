@@ -19,39 +19,56 @@ const DEFAULT_CONTEXT_LENGTH = 128000;
  * Get context length for GPT models based on model name
  */
 function getGPTContextLength(modelName: string): number {
-	const normalizedName = modelName.toLowerCase();
+		const normalizedName = modelName.toLowerCase();
 
-	// GPT-4o 최신
-	if (normalizedName.includes('gpt-4o')) { return 128000; }
+		// GPT-5 계열
+		if (normalizedName.includes('gpt-5')) {
+			if (
+				normalizedName.includes('gpt-5-nano') ||
+				normalizedName.includes('gpt-5-mini') ||
+				normalizedName.includes('gpt-5')
+			) {
+				return 400000;
+			}
+		}
 
-	// GPT-4 Turbo
-	if (normalizedName.includes('gpt-4-turbo')) { return 128000; }
+		// GPT-4 계열
+		if (normalizedName.includes('gpt-4')) {
+			if (
+				normalizedName.includes('gpt-4o') ||
+				normalizedName.includes('gpt-4-turbo') ||
+				normalizedName.includes('gpt-4-vision-preview')
+			) {
+				return 128000;
+			}
+			if (normalizedName.includes('gpt-4-32k')) {
+				return 32768;
+			}
+			// gpt-4 기본
+			return 8192;
+		}
 
-	// GPT-4 32K
-	if (normalizedName.includes('gpt-4-32k')) { return 32768; }
+		// GPT-3.5 Turbo 최신 (16,385)
+		if (normalizedName.includes('gpt-3.5-turbo')) {
+			return 16385;
+		}
 
-	// GPT-4 기본
-	if (normalizedName.includes('gpt-4')) { return 8192; }
+		// text-davinci-003/002
+		if (normalizedName.includes('text-davinci-003')) { return 4097; }
+		if (normalizedName.includes('text-davinci-002')) { return 4097; }
 
-	// GPT-3.5 Turbo 최신 (16,385)
-	if (normalizedName.includes('gpt-3.5-turbo')) { return 16385; }
+		// text-embedding-3
+		if (normalizedName.includes('text-embedding-3-large')) { return 8192; }
+		if (normalizedName.includes('text-embedding-3-small')) { return 8192; }
 
-	// text-davinci-003/002
-	if (normalizedName.includes('text-davinci-003')) { return 4097; }
-	if (normalizedName.includes('text-davinci-002')) { return 4097; }
+		// GPT-3 계열
+		if (normalizedName.includes('davinci')) { return 2049; }
+		if (normalizedName.includes('curie')) { return 2049; }
+		if (normalizedName.includes('babbage')) { return 2049; }
+		if (normalizedName.includes('ada')) { return 2049; }
 
-	// text-embedding-3
-	if (normalizedName.includes('text-embedding-3-large')) { return 8192; }
-	if (normalizedName.includes('text-embedding-3-small')) { return 8192; }
-
-	// GPT-3 계열
-	if (normalizedName.includes('davinci')) { return 2049; }
-	if (normalizedName.includes('curie')) { return 2049; }
-	if (normalizedName.includes('babbage')) { return 2049; }
-	if (normalizedName.includes('ada')) { return 2049; }
-
-	// Default context length for unknown models
-	return DEFAULT_CONTEXT_LENGTH;
+		// Default context length for unknown models
+		return DEFAULT_CONTEXT_LENGTH;
 }
 
 /**
